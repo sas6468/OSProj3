@@ -83,6 +83,65 @@ void buffer_add_request(int fd, char *filename, int filesize) {
     pthread_mutex_unlock(&buffer_lock);
 }
 
+// Get next request based on scheduling policy
+int get_next_request_index() {
+    int i, next_index = -1;
+    
+    switch (scheduling_algo) {
+        case 0: // FIFO
+            // Always use head of buffer
+            next_index = buffer_head;
+            break;
+            
+        case 1: // Smallest-file-first (SFF)
+            {
+                int smallest_size = INT_MAX;
+                time_t oldest_request = 0;
+                
+                // First pass: check for starvation
+                for (i = 0; i < buffer_size; i++) {
+                    int idx = (buffer_head + i) % buffer_max_size;
+                    time_t current_time = time(NULL);
+                    
+                    // If a request has been waiting too long, give it priority
+                    if (difftime(current_time, request_buffer[idx].arrival_time) > starvation_threshold) {
+                        if (oldest_request == 0 || request_buffer[idx].arrival_time < oldest_request) {
+                            oldest_request = request_buffer[idx].arrival_time;
+                            next_index = idx;
+                        }
+                    }
+                }
+                
+                // If no starving requests, use SFF
+                if (next_index == -1) {
+                    for (i = 0; i < buffer_size; i++) {
+                        int idx = (buffer_head + i) % buffer_max_size;
+                        if (request_buffer[idx].filesize < smallest_size) {
+                            smallest_size = request_buffer[idx].filesize;
+                            next_index = idx;
+                        }
+                    }
+                }
+            }
+            break;
+            
+        case 2: // Random
+            {
+                // Select a random request
+                int random_offset = rand() % buffer_size;
+                next_index = (buffer_head + random_offset) % buffer_max_size;
+            }
+            break;
+            
+        default:
+            // Default to FIFO
+            next_index = buffer_head;
+            break;
+    }
+    
+    return next_index;
+}
+
 //
 // Sends out HTTP response in case of errors
 //
