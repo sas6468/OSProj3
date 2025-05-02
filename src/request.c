@@ -43,6 +43,23 @@ void buffer_init() {
     srand(time(NULL));
 }
 
+// Check if path contains directory traversal attempt
+int is_path_safe(char *path) {
+    // Check for ".." which could be used for directory traversal
+    if (strstr(path, "..") != NULL) {
+        return 0; // Not safe
+    }
+    
+    // Check for suspicious path patterns
+    if (strstr(path, "/.") != NULL || strstr(path, "//") != NULL) {
+        return 0; // Not safe
+    }
+    
+    // Additional checks could be added here
+    
+    return 1; // Safe
+}
+
 //
 // Sends out HTTP response in case of errors
 //
