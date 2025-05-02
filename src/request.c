@@ -142,6 +142,43 @@ int get_next_request_index() {
     return next_index;
 }
 
+// Remove request from buffer
+request_t buffer_get_request() {
+    pthread_mutex_lock(&buffer_lock);
+    
+    // Wait if buffer is empty
+    while (buffer_size <= 0) {
+        pthread_cond_wait(&buffer_not_empty, &buffer_lock);
+    }
+    
+    // Get next request based on scheduling policy
+    int next_index = get_next_request_index();
+    request_t request = request_buffer[next_index];
+    
+    // If not FIFO, we need to re-arrange the buffer
+    if (next_index != buffer_head) {
+        // Shift all requests between head and next_index
+        request_t temp = request_buffer[next_index];
+        int i = next_index;
+        while (i != buffer_head) {
+            int prev = (i - 1 + buffer_max_size) % buffer_max_size;
+            request_buffer[i] = request_buffer[prev];
+            i = prev;
+        }
+        request_buffer[buffer_head] = temp;
+    }
+    
+    // Update head
+    buffer_head = (buffer_head + 1) % buffer_max_size;
+    buffer_size--;
+    
+    // Signal that buffer is not full
+    pthread_cond_signal(&buffer_not_full);
+    pthread_mutex_unlock(&buffer_lock);
+    
+    return request;
+}
+
 //
 // Sends out HTTP response in case of errors
 //
