@@ -305,10 +305,32 @@ void request_serve_static(int fd, char *filename, int filesize) {
 //
 // Fetches the requests from the buffer and handles them (thread logic)
 //
+//
+// Fetches the requests from the buffer and handles them (thread logic)
+//
 void* thread_request_serve_static(void* arg)
 {
-    // TODO: write code to actualy respond to HTTP requests
-    // Pull from global buffer of requests
+    // Initialize the buffer if it hasn't been initialized
+    static int initialized = 0;
+    if (!initialized) {
+        pthread_mutex_lock(&buffer_lock);
+        if (!initialized) {
+            buffer_init();
+            initialized = 1;
+        }
+        pthread_mutex_unlock(&buffer_lock);
+    }
+    
+    // Thread main loop
+    while (1) {
+        // Get a request from the buffer
+        request_t request = buffer_get_request();
+        
+        // Process the request
+        request_serve_static(request.fd, request.filename, request.filesize);
+    }
+    
+    return NULL;
 }
 
 //
