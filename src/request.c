@@ -297,6 +297,9 @@ void request_serve_static(int fd, char *filename, int filesize) {
     //  Writes out to the client socket the memory-mapped file 
     write_or_die(fd, srcp, filesize);
     munmap_or_die(srcp, filesize);
+    
+    // Close the socket connection
+    close_or_die(fd);
 }
 
 //
