@@ -8,11 +8,28 @@ int num_threads = DEFAULT_THREADS;
 int buffer_max_size = DEFAULT_BUFFER_SIZE;
 int scheduling_algo = DEFAULT_SCHED_ALGO;	
 
-//
-//	TODO: add code to create and manage the shared global buffer of requests
-//	HINT: You will need synchronization primitives.
-//		pthread_mutuex_t lock_var is a viable option.
-//
+// Define request structure
+typedef struct {
+    int fd;                  // Client socket descriptor
+    char filename[MAXBUF];   // Requested filename
+    int filesize;            // Size of requested file
+    time_t arrival_time;     // Time when request arrived (for starvation prevention)
+} request_t;
+
+// Buffer to store requests
+request_t *request_buffer = NULL;
+
+// Synchronization primitives
+pthread_mutex_t buffer_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t buffer_not_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t buffer_not_full = PTHREAD_COND_INITIALIZER;
+
+// Variables to track buffer state
+int buffer_head = 0;
+int buffer_tail = 0;
+
+// Counter for starvation prevention
+int starvation_threshold = 10; // Requests waiting longer than this many cycles get priority
 
 //
 // Sends out HTTP response in case of errors
