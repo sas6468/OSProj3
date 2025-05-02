@@ -7,11 +7,11 @@
 
 #define MAXBUF (8192)
 
-// below default values are defined in 'request.h'
-int buffer_size = 0;
-int num_threads = DEFAULT_THREADS;
+// Global variables for buffer and synchronization
 int buffer_max_size = DEFAULT_BUFFER_SIZE;
-int scheduling_algo = DEFAULT_SCHED_ALGO;	
+int buffer_size = 0;
+int scheduling_algo = DEFAULT_SCHED_ALGO;
+int num_threads = DEFAULT_THREADS;
 
 // Define request structure
 typedef struct {
@@ -227,7 +227,7 @@ void request_read_headers(int fd) {
     
     readline_or_die(fd, buf, MAXBUF);
     while (strcmp(buf, "\r\n")) {
-	readline_or_die(fd, buf, MAXBUF);
+		readline_or_die(fd, buf, MAXBUF);
     }
     return;
 }
@@ -235,6 +235,7 @@ void request_read_headers(int fd) {
 //
 // Return 1 if static, 0 if dynamic content (executable file)
 // Calculates filename (and cgiargs, for dynamic) from uri
+//
 int request_parse_uri(char *uri, char *filename, char *cgiargs) {
     char *ptr;
     
@@ -265,13 +266,13 @@ int request_parse_uri(char *uri, char *filename, char *cgiargs) {
 //
 void request_get_filetype(char *filename, char *filetype) {
     if (strstr(filename, ".html")) 
-	strcpy(filetype, "text/html");
+		strcpy(filetype, "text/html");
     else if (strstr(filename, ".gif")) 
-	strcpy(filetype, "image/gif");
+		strcpy(filetype, "image/gif");
     else if (strstr(filename, ".jpg")) 
-	strcpy(filetype, "image/jpeg");
+		strcpy(filetype, "image/jpeg");
     else 
-	strcpy(filetype, "text/plain");
+		strcpy(filetype, "text/plain");
 }
 
 //
@@ -310,9 +311,6 @@ void request_serve_static(int fd, char *filename, int filesize) {
 //
 // Fetches the requests from the buffer and handles them (thread logic)
 //
-//
-// Fetches the requests from the buffer and handles them (thread logic)
-//
 void* thread_request_serve_static(void* arg)
 {
     // Initialize the buffer if it hasn't been initialized
@@ -347,19 +345,19 @@ void request_handle(int fd) {
     char buf[MAXBUF], method[MAXBUF], uri[MAXBUF], version[MAXBUF];
     char filename[MAXBUF], cgiargs[MAXBUF];
     
-    // get the request type, file path and HTTP version
+	// get the request type, file path and HTTP version
     readline_or_die(fd, buf, MAXBUF);
     sscanf(buf, "%s %s %s", method, uri, version);
     printf("method:%s uri:%s version:%s\n", method, uri, version);
 
-    // verify if the request type is GET or not
+	// verify if the request type is GET or not
     if (strcasecmp(method, "GET")) {
-        request_error(fd, method, "501", "Not Implemented", "server does not implement this method");
-        return;
+		request_error(fd, method, "501", "Not Implemented", "server does not implement this method");
+		return;
     }
     request_read_headers(fd);
     
-    // check requested content type (static/dynamic)
+	// check requested content type (static/dynamic)
     is_static = request_parse_uri(uri, filename, cgiargs);
     
     // Security check to prevent directory traversal attacks
@@ -368,23 +366,23 @@ void request_handle(int fd) {
         return;
     }
     
-    // get some data regarding the requested file, also check if requested file is present on server
+	// get some data regarding the requested file, also check if requested file is present on server
     if (stat(filename, &sbuf) < 0) {
-        request_error(fd, filename, "404", "Not found", "server could not find this file");
-        return;
+		request_error(fd, filename, "404", "Not found", "server could not find this file");
+		return;
     }
     
-    // verify if requested content is static
+	// verify if requested content is static
     if (is_static) {
-        if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
-            request_error(fd, filename, "403", "Forbidden", "server could not read this file");
-            return;
-        }
-        
-        // Add request to buffer
+		if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
+			request_error(fd, filename, "403", "Forbidden", "server could not read this file");
+			return;
+		}
+		
+		// Add request to buffer
         buffer_add_request(fd, filename, sbuf.st_size);
 
     } else {
-        request_error(fd, filename, "501", "Not Implemented", "server does not serve dynamic content request");
+		request_error(fd, filename, "501", "Not Implemented", "server does not serve dynamic content request");
     }
 }
