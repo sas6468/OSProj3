@@ -31,6 +31,18 @@ int buffer_tail = 0;
 // Counter for starvation prevention
 int starvation_threshold = 10; // Requests waiting longer than this many cycles get priority
 
+// Initialize buffer
+void buffer_init() {
+    request_buffer = (request_t *)malloc(buffer_max_size * sizeof(request_t));
+    if (!request_buffer) {
+        fprintf(stderr, "Failed to allocate memory for request buffer\n");
+        exit(1);
+    }
+    
+    // Initialize random number generator for random scheduling
+    srand(time(NULL));
+}
+
 //
 // Sends out HTTP response in case of errors
 //
