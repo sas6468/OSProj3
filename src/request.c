@@ -1,9 +1,14 @@
 #include "io_helper.h"
 #include "request.h"
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <limits.h>
 
 #define MAXBUF (8192)
 
 // below default values are defined in 'request.h'
+int buffer_size = 0;
 int num_threads = DEFAULT_THREADS;
 int buffer_max_size = DEFAULT_BUFFER_SIZE;
 int scheduling_algo = DEFAULT_SCHED_ALGO;	
