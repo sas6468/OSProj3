@@ -60,6 +60,29 @@ int is_path_safe(char *path) {
     return 1; // Safe
 }
 
+// Add request to buffer
+void buffer_add_request(int fd, char *filename, int filesize) {
+    pthread_mutex_lock(&buffer_lock);
+    
+    // Wait if buffer is full
+    while (buffer_size >= buffer_max_size) {
+        pthread_cond_wait(&buffer_not_full, &buffer_lock);
+    }
+    
+    // Add request to buffer
+    request_buffer[buffer_tail].fd = fd;
+    strcpy(request_buffer[buffer_tail].filename, filename);
+    request_buffer[buffer_tail].filesize = filesize;
+    request_buffer[buffer_tail].arrival_time = time(NULL);
+    
+    buffer_tail = (buffer_tail + 1) % buffer_max_size;
+    buffer_size++;
+    
+    // Signal that buffer is not empty
+    pthread_cond_signal(&buffer_not_empty);
+    pthread_mutex_unlock(&buffer_lock);
+}
+
 //
 // Sends out HTTP response in case of errors
 //
