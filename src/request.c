@@ -349,31 +349,37 @@ void request_handle(int fd) {
 
     // verify if the request type is GET or not
     if (strcasecmp(method, "GET")) {
-	request_error(fd, method, "501", "Not Implemented", "server does not implement this method");
-	return;
+        request_error(fd, method, "501", "Not Implemented", "server does not implement this method");
+        return;
     }
     request_read_headers(fd);
     
     // check requested content type (static/dynamic)
     is_static = request_parse_uri(uri, filename, cgiargs);
     
+    // Security check to prevent directory traversal attacks
+    if (!is_path_safe(filename)) {
+        request_error(fd, filename, "403", "Forbidden", "directory traversal attempt detected");
+        return;
+    }
+    
     // get some data regarding the requested file, also check if requested file is present on server
     if (stat(filename, &sbuf) < 0) {
-	request_error(fd, filename, "404", "Not found", "server could not find this file");
-	return;
+        request_error(fd, filename, "404", "Not found", "server could not find this file");
+        return;
     }
     
     // verify if requested content is static
     if (is_static) {
-	if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
-		request_error(fd, filename, "403", "Forbidden", "server could not read this file");
-		return;
-	}
-    
-	// TODO: directory traversal mitigation	
-	// TODO: write code to add HTTP requests in the buffer
+        if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
+            request_error(fd, filename, "403", "Forbidden", "server could not read this file");
+            return;
+        }
+        
+        // Add request to buffer
+        buffer_add_request(fd, filename, sbuf.st_size);
 
     } else {
-	request_error(fd, filename, "501", "Not Implemented", "server does not serve dynamic content request");
+        request_error(fd, filename, "501", "Not Implemented", "server does not serve dynamic content request");
     }
 }
